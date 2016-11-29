@@ -1,6 +1,7 @@
 FROM python:2.7.12
 MAINTAINER jiaming
 
+ENV DB_FILE=/data/hrv.db
 
 ADD project /project
 

@@ -6,8 +6,7 @@ build:
 	docker push $(APP_IMAGE)
 
 run:
-	mkdir $(PROJECT_DIR)/data
 	docker run --rm \
-		-p 8080:8080 \
-		-v $(PROJECT_DIR)/data:/data \
+		-p 8081:8080 \
+		-v $(PROJECT_DIR):/data \
 		$(APP_IMAGE) 
