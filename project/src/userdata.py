@@ -42,7 +42,7 @@ class HRV:
         data=map(lambda x:pickle.loads(x[0]),self.dbi.query(sql)) 
         return data if len(data)>0 else None
 
-    def setStatusByFeatures(self,featureNames):
+    def setStatusByStd(self,featureNames):
         oldFeatures=self.getLatestFeatures(self.user)
         if oldFeatures is not None and len(oldFeatures)>5:
             featuresMatrix=map(lambda x: [x[name] for name in featureNames],oldFeatures)
@@ -56,6 +56,21 @@ class HRV:
                 if numpy.max(abs(newStd[nonZeroIndex]-oldStd[nonZeroIndex])/oldStd[nonZeroIndex]) > 0.3:
                     self.status='unnormal'
 
+
+    def setStatusByProbability(self,featureNames):
+        oldFeatures=self.getLatestFeatures(self.user)
+        if oldFeatures is not None and len(oldFeatures)>5:
+            featuresMatrix=map(lambda x: [x[name] for name in featureNames],oldFeatures)
+            featuresMatrix+=[[self.features[name] for name in featureNames]]
+
+            featuresMatrix=sk.normalize(featuresMatrix,axis=0)
+            newFeature=featuresMatrix[-1]
+            std=numpy.round(numpy.std(featuresMatrix[:-1],axis=0),5)
+            mean=numpy.round(numpy.mean(featuresMatrix[:-1],axis=0),5)
+            probability=reduce(lambda x,y:x*y,numpy.exp(-1.0*(newFeature-mean)**2/(2*std**2))/(numpy.sqrt(2*numpy.pi*std)))
+            if probability < 0.5:
+                self.status='unnormal'
+            
 
     def emotionRecognizing(self):
         #get NN interval array
@@ -74,7 +89,8 @@ class HRV:
         self.features.update(frequencyDomainFeatures)
 
         #calculate feature difference
-        self.setStatusByFeatures(self.featureIndex)
+        # self.setStatusByStd(self.featureIndex)
+        self.setStatusByProbability(self.featureIndex)
 
         self.recording()
         return '{"emotion_changed":%s,"heart_rate":%d}' % (self.status=='normal',self.features['mhr'])
