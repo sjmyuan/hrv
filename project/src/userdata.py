@@ -2,9 +2,10 @@ import rpeakdetect
 from hrv.classical import time_domain, frequency_domain
 import pickle
 import numpy
+import sklearn.preprocessing as sk
 
 class HRV:
-    def __init__(self,originData):
+    def __init__(self,originData,dbi):
         self.time=originData['time']
         self.user=originData['user']
         self.timeInterval=originData['time_interval']
@@ -12,10 +13,13 @@ class HRV:
         self.label=originData['label']
         self.originData=originData['origin_data']
         self.features={}
+        self.dbi=dbi
+        self.status='normal'
+        self.featureIndex=['hf', 'hfnu', 'lf', 'lf_hf', 'lfnu', 'mhr', 'mrri', 'nn50', 'pnn50', 'rmssd', 'sdnn', 'total_power', 'vlf']
 
-    def recording(self,dbi):
+    def recording(self):
         sql="insert into originData values(?,?,?,?,?,?)"
-        dbi.execute(sql,
+        self.dbi.execute(sql,
                 [
                     self.time,
                     self.user,
@@ -25,12 +29,33 @@ class HRV:
                     pickle.dumps(self.originData)
                 ])
 
-        sql="insert into featureData values(?,?,?)"
-        dbi.execute(sql,[
+        sql="insert into featureData values(?,?,?,?)"
+        self.dbi.execute(sql,[
             self.time,
             self.user,
+            self.status,
             pickle.dumps(self.features)
             ])
+
+    def getLatestFeatures(self,user):
+        sql="select features from featureData where user='%s' and status='normal' order by time desc limit 10" % user
+        data=map(lambda x:pickle.loads(x[0]),self.dbi.query(sql)) 
+        return data if len(data)>0 else None
+
+    def setStatusByFeatures(self,featureNames):
+        oldFeatures=self.getLatestFeatures(self.user)
+        if oldFeatures is not None and len(oldFeatures)>5:
+            featuresMatrix=map(lambda x: [x[name] for name in featureNames],oldFeatures)
+            featuresMatrix+=[[self.features[name] for name in featureNames]]
+
+            featuresMatrix=sk.normalize(featuresMatrix,axis=0)
+            oldStd=numpy.round(numpy.std(featuresMatrix[:-1],axis=0),5)
+            newStd=numpy.round(numpy.std(featuresMatrix,axis=0),5)
+            nonZeroIndex=numpy.nonzero(oldStd)
+            if nonZeroIndex[0].size>0:
+                if numpy.max(abs(newStd[nonZeroIndex]-oldStd[nonZeroIndex])/oldStd[nonZeroIndex]) > 0.3:
+                    self.status='unnormal'
+
 
     def emotionRecognizing(self):
         #get NN interval array
@@ -47,5 +72,10 @@ class HRV:
                                                     window_function='hanning')
         self.features.update(timeDomainFeatures)
         self.features.update(frequencyDomainFeatures)
-        return '{"emotion_changed":True,"heart_rate":%d}' % (self.features['mhr'])
+
+        #calculate feature difference
+        self.setStatusByFeatures(self.featureIndex)
+
+        self.recording()
+        return '{"emotion_changed":%s,"heart_rate":%d}' % (self.status=='normal',self.features['mhr'])
 

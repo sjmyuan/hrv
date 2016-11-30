@@ -11,9 +11,8 @@ dbi=db.DBI(dbFile)
 @post('/data')
 def serve_data():
     data=request.json  
-    hrv=userdata.HRV(data)
+    hrv=userdata.HRV(data,dbi)
     result=hrv.emotionRecognizing()
-    hrv.recording(dbi)
     return result
 
 run(host='localhost', port=8080, debug=True)
