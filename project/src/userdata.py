@@ -3,6 +3,7 @@ from hrv.classical import time_domain, frequency_domain
 import pickle
 import numpy
 import sklearn.preprocessing as sk
+from sklearn.ensemble import IsolationForest
 
 class HRV:
     def __init__(self,originData,dbi):
@@ -38,7 +39,7 @@ class HRV:
             ])
 
     def getLatestFeatures(self,user):
-        sql="select features from featureData where user='%s' and status='normal' order by time desc limit 10" % user
+        sql="select features from featureData where user='%s' and status='normal' order by time desc limit 1000" % user
         data=map(lambda x:pickle.loads(x[0]),self.dbi.query(sql)) 
         return data if len(data)>0 else None
 
@@ -71,6 +72,17 @@ class HRV:
             if probability < 0.5:
                 self.status='unnormal'
             
+    def setStatusByIsolationForest(self,featureNames):
+        oldFeatures=self.getLatestFeatures(self.user)
+        if oldFeatures is not None and len(oldFeatures)>5:
+            featuresMatrix=map(lambda x: [x[name] for name in featureNames],oldFeatures)
+            newFeature=[[self.features[name] for name in featureNames]]
+            clf=IsolationForest(200,0.25,numpy.random.RandomState(42))
+            clf.fit(featuresMatrix)
+            result=clf.predict(newFeature)
+
+            if result < 0:
+                self.status='unnormal'
 
     def emotionRecognizing(self):
         #get NN interval array
