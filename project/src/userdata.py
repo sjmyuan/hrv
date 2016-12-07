@@ -4,19 +4,35 @@ import pickle
 import numpy
 import sklearn.preprocessing as sk
 from sklearn.ensemble import IsolationForest
+from scipy import interpolate
 
 class HRV:
     def __init__(self,originData,dbi):
+        '''
+        all time unit is millisecond 
+        '''
         self.time=originData['time']
         self.user=originData['user']
         self.timeInterval=originData['time_interval']
         self.sampleRate=float(originData['sample_rate'])
         self.label=originData['label']
         self.originData=originData['origin_data']
+        self.originTime=originData.get('origin_time',None)
+        self.samples=self.originData
         self.features={}
         self.dbi=dbi
         self.status='normal'
         self.featureIndex=['hf', 'hfnu', 'lf', 'lf_hf', 'lfnu', 'mhr', 'mrri', 'nn50', 'pnn50', 'rmssd', 'sdnn', 'total_power', 'vlf']
+
+    def resample(self):
+        if self.originTime is not None:
+            self.time=self.originTime[0]
+            self.timeInterval=self.originTime[-1]-self.originTime[0]
+            self.sampleRate=200
+            xcord=numpy.linspace(self.originTime[0], self.originTime[-1], int(self.timeInterval*self.sampleRate/1000.0))
+            # self.samples=numpy.interp(xcord,self.originTime,self.originData)
+            func=interpolate.interp1d(self.originTime,self.originData,kind='cubic')
+            self.samples=func(xcord)
 
     def recording(self):
         sql="insert into originData values(?,?,?,?,?,?)"
@@ -77,7 +93,7 @@ class HRV:
         if oldFeatures is not None and len(oldFeatures)>5:
             featuresMatrix=map(lambda x: [x[name] for name in featureNames],oldFeatures)
             newFeature=[[self.features[name] for name in featureNames]]
-            clf=IsolationForest(200,0.25,numpy.random.RandomState(42))
+            clf=IsolationForest(max_samples=100, random_state=numpy.random.RandomState(42))
             clf.fit(featuresMatrix)
             result=clf.predict(newFeature)
 
@@ -85,11 +101,13 @@ class HRV:
                 self.status='unnormal'
 
     def emotionRecognizing(self):
+        self.resample()
+
         #get NN interval array
-        peakIndex=numpy.asarray( rpeakdetect.detect_beats(self.originData,self.sampleRate) )
+        peakIndex=numpy.asarray( rpeakdetect.detect_beats(self.samples,self.sampleRate,5.0,0.04,0.4) )
         peakIndexHigh=peakIndex[1:] 
         peakIndexLow=peakIndex[:-1]
-        nnInterval=(peakIndexHigh-peakIndexLow)/self.sampleRate*1000
+        nnInterval=(peakIndexHigh-peakIndexLow)*1000.0/self.sampleRate
 
         #calculate hrv features
         timeDomainFeatures=time_domain(nnInterval)
