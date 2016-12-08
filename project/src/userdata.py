@@ -31,8 +31,9 @@ class HRV:
             self.sampleRate=200
             xcord=numpy.linspace(self.originTime[0], self.originTime[-1], int(self.timeInterval*self.sampleRate/1000.0))
             # self.samples=numpy.interp(xcord,self.originTime,self.originData)
-            func=interpolate.interp1d(self.originTime,self.originData,kind='cubic')
-            self.samples=func(xcord)
+            # func=interpolate.interp1d(self.originTime,self.originData,kind='cubic')
+            func=interpolate.splrep(self.originTime,self.originData)
+            self.samples=interpolate.splev(xcord,func)
 
     def recording(self):
         sql="insert into originData values(?,?,?,?,?,?)"
