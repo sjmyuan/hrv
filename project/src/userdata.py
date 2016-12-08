@@ -97,14 +97,14 @@ class HRV:
             clf.fit(featuresMatrix)
             result=clf.predict(newFeature)
 
-            if result < 0:
+            if result[0] < 0:
                 self.status='unnormal'
 
     def emotionRecognizing(self):
         self.resample()
 
         #get NN interval array
-        peakIndex=numpy.asarray( rpeakdetect.detect_beats(self.samples,self.sampleRate,5.0,0.04,0.4) )
+        peakIndex=numpy.asarray( rpeakdetect.detect_beats(self.samples,self.sampleRate) )
         peakIndexHigh=peakIndex[1:] 
         peakIndexLow=peakIndex[:-1]
         nnInterval=(peakIndexHigh-peakIndexLow)*1000.0/self.sampleRate
@@ -120,8 +120,10 @@ class HRV:
 
         #calculate feature difference
         # self.setStatusByStd(self.featureIndex)
-        self.setStatusByProbability(self.featureIndex)
+        # self.setStatusByProbability(self.featureIndex)
+        self.setStatusByIsolationForest(self.features) 
 
         self.recording()
-        return '{"emotion_changed":%s,"heart_rate":%d}' % (self.status=='normal',self.features['mhr'])
+        print self.features
+        return {'emotion_changed': self.status == 'unnormal','heart_rate': self.features['mhr']}
 

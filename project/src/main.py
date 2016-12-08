@@ -1,8 +1,9 @@
-from bottle import run,post,request
+from bottle import run,post,request,response
 import sqlite3
 import db
 import os
 import userdata
+from json import dumps
 
 #initialize database
 dbFile=os.getenv('DB_FILE', 'hrv.db')
@@ -13,6 +14,8 @@ def serve_data():
     data=request.json  
     hrv=userdata.HRV(data,dbi)
     result=hrv.emotionRecognizing()
-    return result
+    print result
+    response.content_type = 'application/json'
+    return dumps(result)
 
-run(host='localhost', port=8080, debug=True)
+run(host='0.0.0.0', port=8080, debug=True)
