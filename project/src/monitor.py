@@ -33,8 +33,8 @@ def show_feature(user,dataLen):
 
 def show_raw(user,dataLen):
     sql="select data from originData where user='%s' order by time asc limit %d" % (user,dataLen)
-    data=map(lambda x:pickle.loads(x[0]),dbi.query(sql)) 
-    data=numpy.array(data)
+    data=dbi.query(sql)
+    data=numpy.array(pickle.loads(data[-1][0]))
     
     plt.figure(1)
     plt.plot(data.flatten())
