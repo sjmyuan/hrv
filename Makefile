@@ -1,4 +1,4 @@
-APP_IMAGE = "jiangmingshang/hrv"
+APP_IMAGE = "jiangmingshang/hrv:latest"
 PROJECT_DIR = $(shell pwd )
 
 build:

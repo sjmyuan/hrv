@@ -113,7 +113,7 @@ class HRV:
         #calculate hrv features
         timeDomainFeatures=time_domain(nnInterval)
         frequencyDomainFeatures=frequency_domain(nnInterval,interp_freq=6.0,
-                                                    method='welch', segment_size=10,
+                                                    method='welch', segment_size=5,
                                                     overlap_size=5,
                                                     window_function='hanning')
         self.features.update(timeDomainFeatures)
@@ -122,7 +122,8 @@ class HRV:
         #calculate feature difference
         # self.setStatusByStd(self.featureIndex)
         # self.setStatusByProbability(self.featureIndex)
-        self.setStatusByIsolationForest(self.features) 
+        # self.setStatusByIsolationForest(self.featureIndex) 
+        self.setStatusByIsolationForest(['hf','lf','pnn50','lf_hf','nn50','rmssd','total_power']) 
 
         self.recording()
         print self.features

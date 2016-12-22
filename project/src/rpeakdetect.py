@@ -9,9 +9,9 @@ def detect_beats(
         # Window size in seconds to use for 
         ransac_window_size=5.0,
         # Low frequency of the band pass filter
-        lowfreq=5.0,
+        lowfreq=5,
         # High frequency of the band pass filter
-        highfreq=15.0,
+        highfreq=15,
         ):
     """
     ECG heart beat detection based on

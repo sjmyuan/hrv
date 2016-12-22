@@ -6,6 +6,7 @@ from json import dumps
 import matplotlib.pyplot as plt
 import argparse
 import numpy
+from sklearn.ensemble import IsolationForest
 
 #initialize database
 dbFile=os.getenv('DB_FILE', 'hrv.db')
@@ -39,6 +40,17 @@ def show_raw(user,dataLen):
     plt.figure(1)
     plt.plot(data.flatten())
     plt.show()
+
+def validate(user,dataLen):
+    sql="select data from originData where user='%s' order by time asc limit %d" % (user,dataLen)
+    data=dbi.query(sql)
+    data=pickle.loads(data[-1][0])
+    clf=IsolationForest(max_samples=100, random_state=numpy.random.RandomState(42))
+    clf.fit(featuresMatrix)
+    result=clf.predict(newFeature)
+
+    if result[0] < 0:
+        self.status='unnormal'
 
 if __name__ == "__main__":
     parser=create_parser()
